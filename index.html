@@ -1,0 +1,1286 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="WD Strike" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="War Dogs mortar and artillery range calculator" />
+  <title>WD Artillery Strike â€” Range Calculator</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg-elevated: #161b22;
+      --bg-input: #21262d;
+      --border: #30363d;
+      --border-focus: #58a6ff;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #6e7681;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --green: #3fb950;
+      --green-bg: rgba(63, 185, 80, 0.15);
+      --orange: #f0883e;
+      --orange-bg: rgba(240, 136, 62, 0.15);
+      --warning: #d29922;
+      --warning-bg: rgba(210, 153, 34, 0.15);
+      --muted-badge: #8b949e;
+      --muted-badge-bg: rgba(139, 148, 158, 0.12);
+      --danger: #f85149;
+      --radius: 12px;
+      --tap: 48px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: "Cascadia Code", "Consolas", "SF Mono", ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      min-height: 100dvh;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
+      padding-left: var(--safe-left);
+      padding-right: var(--safe-right);
+    }
+
+    .app {
+      flex: 1;
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding:
+        calc(0.85rem + var(--safe-top))
+        0.85rem
+        calc(1.25rem + var(--safe-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    header {
+      text-align: center;
+      padding: 0.25rem 0 0;
+    }
+
+    header h1 {
+      font-size: clamp(1.2rem, 4.5vw, 1.45rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.95rem 1rem;
+    }
+
+    .panel-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .panel-label h2 {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .persist-tag {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+    }
+
+    .coords-display {
+      font-family: var(--mono);
+      font-size: clamp(1.15rem, 4.5vw, 1.5rem);
+      font-weight: 600;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+      min-height: var(--tap);
+      display: flex;
+      align-items: center;
+      word-break: break-all;
+    }
+
+    .coords-display.empty {
+      color: var(--text-dim);
+      font-weight: 400;
+      font-size: 0.95rem;
+    }
+
+    .coords-display .axis {
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-right: 0.15rem;
+    }
+
+    .coords-display .sep {
+      color: var(--text-dim);
+      margin: 0 0.65rem;
+    }
+
+    /* Mobile-first: stack paste full-width, then input + set */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+
+    .manual-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
+    .manual-row input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: var(--mono);
+      /* 16px prevents iOS auto-zoom on focus */
+      font-size: 16px;
+      padding: 0.75rem 0.9rem;
+      min-height: var(--tap);
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .manual-row input[type="text"]::placeholder {
+      color: var(--text-dim);
+      font-family: var(--font);
+      font-size: 0.9rem;
+    }
+
+    .manual-row input[type="text"]:focus {
+      border-color: var(--border-focus);
+    }
+
+    button {
+      font-family: var(--font);
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      min-height: var(--tap);
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, opacity 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    button:active { opacity: 0.85; }
+
+    .btn-paste {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+    }
+
+    .btn-paste .hint {
+      display: none;
+      font-size: 0.75rem;
+      font-weight: 500;
+      opacity: 0.75;
+    }
+
+    .btn-secondary {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #2d333b;
+      border-color: #484f58;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0d1117;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-set {
+      background: var(--bg-input);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      min-width: 4.5rem;
+      flex-shrink: 0;
+    }
+
+    .btn-set:hover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    .status-msg {
+      font-size: 0.8rem;
+      color: var(--danger);
+      margin-top: 0.55rem;
+      min-height: 1.2em;
+    }
+
+    .status-msg.ok { color: var(--green); }
+
+    /* Result â€” sticky on mobile so distance stays visible while editing */
+    .result {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.35rem 1rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.65rem;
+      position: sticky;
+      bottom: calc(0.5rem + var(--safe-bottom));
+      z-index: 5;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .result-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .unit-toggle {
+      display: inline-flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .unit-toggle button {
+      min-height: 32px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+    }
+
+    .unit-toggle button[aria-pressed="true"] {
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .unit-toggle button:hover {
+      color: var(--text);
+    }
+
+    .mil-meta {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      min-height: 1.2em;
+    }
+
+    /* L81 optic-style range ladder */
+    .sight {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem 1rem;
+      display: none;
+    }
+
+    .sight.visible { display: block; }
+
+    .sight-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .sight-header h2 {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .sight-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .sight-frame {
+      position: relative;
+      height: 220px;
+      background:
+        radial-gradient(ellipse 90% 80% at 50% 50%, #0a0e14 0%, #05070a 100%);
+      border: 1px solid #3a424c;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.65);
+    }
+
+    .sight-frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 10px;
+      box-shadow: inset 0 0 28px 10px rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    .sight-scale {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    .sight-tick {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.65rem;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .sight-tick::after {
+      content: "";
+      position: absolute;
+      left: 28%;
+      right: 28%;
+      height: 1px;
+      background: rgba(200, 210, 220, 0.28);
+    }
+
+    .sight-tick.major::after {
+      background: rgba(220, 230, 240, 0.55);
+      height: 2px;
+    }
+
+    .sight-tick.minor::after {
+      left: 38%;
+      right: 38%;
+      background: rgba(180, 190, 200, 0.2);
+    }
+
+    .sight-tick .rng,
+    .sight-tick .mil {
+      position: relative;
+      z-index: 2;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: rgba(210, 220, 230, 0.85);
+      letter-spacing: 0.02em;
+      min-width: 3.4rem;
+    }
+
+    .sight-tick .rng { text-align: left; }
+    .sight-tick .mil { text-align: right; }
+
+    .sight-tick.minor .rng,
+    .sight-tick.minor .mil {
+      visibility: hidden;
+    }
+
+    .sight-labels {
+      position: absolute;
+      left: 0.65rem;
+      right: 0.65rem;
+      bottom: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: rgba(160, 170, 180, 0.65);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .sight-marker {
+      position: absolute;
+      left: 0;
+      right: 0;
+      z-index: 5;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+
+    .sight-marker-tag {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, calc(-50% - 1.1rem));
+      background: rgba(63, 185, 80, 0.2);
+      border: 1px solid rgba(63, 185, 80, 0.55);
+      color: #3fb950;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 6;
+    }
+
+    .sight-marker-vals {
+      display: none;
+    }
+
+    .sight-marker-bar {
+      height: 3px;
+      margin: 0 26%;
+      background: #3fb950;
+      box-shadow:
+        0 0 8px rgba(63, 185, 80, 0.9),
+        0 0 18px rgba(63, 185, 80, 0.45);
+      border-radius: 2px;
+    }
+
+    .sight-between {
+      margin-top: 0.55rem;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .sight-between strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .distance {
+      font-family: var(--mono);
+      font-size: clamp(2.6rem, 14vw, 4.5rem);
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .distance .unit {
+      font-size: 0.4em;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 0.15em;
+      vertical-align: baseline;
+    }
+
+    .distance.placeholder {
+      font-size: clamp(1rem, 4vw, 1.25rem);
+      font-weight: 400;
+      color: var(--text-dim);
+      font-family: var(--font);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.5rem 0.95rem;
+      border-radius: 8px;
+      letter-spacing: 0.01em;
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .badge.mortar {
+      color: var(--green);
+      background: var(--green-bg);
+      border: 1px solid rgba(63, 185, 80, 0.35);
+    }
+
+    .badge.artillery {
+      color: var(--orange);
+      background: var(--orange-bg);
+      border: 1px solid rgba(240, 136, 62, 0.35);
+    }
+
+    .badge.deadzone {
+      color: var(--warning);
+      background: var(--warning-bg);
+      border: 1px solid rgba(210, 153, 34, 0.35);
+    }
+
+    .badge.outofrange {
+      color: var(--muted-badge);
+      background: var(--muted-badge-bg);
+      border: 1px solid rgba(139, 148, 158, 0.3);
+    }
+
+    .badge.hidden { display: none; }
+
+    .delta {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    footer {
+      text-align: center;
+      padding: 0.85rem 1rem calc(0.85rem + var(--safe-bottom));
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+    }
+
+    #visitor-count {
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Wider phones / landscape: side-by-side controls */
+    @media (min-width: 520px) {
+      .app {
+        padding: 1.5rem 1.25rem 2rem;
+        gap: 1.1rem;
+      }
+
+      .panel { padding: 1.15rem 1.35rem; }
+
+      .controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: stretch;
+      }
+
+      .btn-paste {
+        width: auto;
+        flex: 0 0 auto;
+      }
+
+      .manual-row {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .result {
+        position: static;
+        box-shadow: none;
+        padding: 1.5rem 1.1rem;
+      }
+    }
+
+    @media (min-width: 720px) {
+      .btn-paste .hint { display: inline; }
+    }
+
+    /* Landscape phones: tighten vertical spacing so result fits */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .app { gap: 0.55rem; padding-top: 0.5rem; }
+      header { display: none; }
+      .coords-display { min-height: 2.5rem; padding: 0.5rem 0.85rem; margin-bottom: 0.5rem; }
+      .result { padding: 0.75rem 1rem; gap: 0.35rem; }
+      .distance { font-size: clamp(1.8rem, 10vw, 2.75rem); }
+      button, .manual-row input[type="text"] { min-height: 42px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>WD Artillery Strike</h1>
+      <p>Mortar &amp; artillery range calculator</p>
+    </header>
+
+    <!-- Mortar -->
+    <section class="panel" aria-labelledby="mortar-heading">
+      <div class="panel-label">
+        <h2 id="mortar-heading">Mortar Position</h2>
+        <span class="persist-tag">Saved locally</span>
+      </div>
+      <div id="mortar-display" class="coords-display empty" aria-live="polite">
+        No mortar set
+      </div>
+      <div class="controls">
+        <button type="button" class="btn-paste btn-secondary" id="mortar-paste" title="Read coordinates from clipboard">
+          Paste mortar
+        </button>
+        <div class="manual-row">
+          <input
+            type="text"
+            id="mortar-input"
+            placeholder="Y X  e.g. 5678.9 1234.5"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            enterkeyhint="done"
+            inputmode="text"
+          />
+          <button type="button" class="btn-set" id="mortar-set">Set</button>
+        </div>
+      </div>
+      <p id="mortar-status" class="status-msg" role="status"></p>
+    </section>
+
+    <!-- Target -->
+    <section class="panel" aria-labelledby="target-heading">
+      <div class="panel-label">
+        <h2 id="target-heading">Target Position</h2>
+      </div>
+      <div id="target-display" class="coords-display empty" aria-live="polite">
+        No target set
+      </div>
+      <div class="controls">
+        <button type="button" class="btn-paste btn-primary" id="target-paste" title="Paste target from clipboard">
+          Paste target
+        </button>
+        <div class="manual-row">
+          <input
+            type="text"
+            id="target-input"
+            placeholder="Y X  e.g. 5710.0 1300.2"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            enterkeyhint="done"
+            inputmode="text"
+          />
+          <button type="button" class="btn-set" id="target-set">Set</button>
+        </div>
+      </div>
+      <p id="target-status" class="status-msg" role="status"></p>
+    </section>
+
+    <!-- Result -->
+    <section class="result" aria-labelledby="result-heading">
+      <div class="result-header">
+        <span class="result-label" id="result-heading">Distance</span>
+        <div class="unit-toggle" role="group" aria-label="Display unit">
+          <button type="button" id="unit-m" aria-pressed="true">m</button>
+          <button type="button" id="unit-mil" aria-pressed="false">MIL</button>
+        </div>
+      </div>
+      <div id="distance" class="distance placeholder" aria-live="polite">Set mortar &amp; target</div>
+      <div id="mil-meta" class="mil-meta" hidden></div>
+      <span id="badge" class="badge hidden" role="status"></span>
+      <div id="delta" class="delta" hidden></div>
+    </section>
+
+    <!-- L81 optic ladder -->
+    <section id="sight" class="sight" aria-label="L81 sight dial guide">
+      <div class="sight-header">
+        <h2>L81 Sight</h2>
+        <span class="sight-hint">Match your marker to the green line</span>
+      </div>
+      <div class="sight-frame" id="sight-frame">
+        <div class="sight-scale" id="sight-scale"></div>
+        <div class="sight-marker" id="sight-marker" hidden>
+          <div class="sight-marker-tag">Set here</div>
+          <div class="sight-marker-bar"></div>
+          <div class="sight-marker-vals" id="sight-marker-vals"></div>
+        </div>
+        <div class="sight-labels"><span>RNG</span><span>MIL</span></div>
+      </div>
+      <p class="sight-between" id="sight-between"></p>
+    </section>
+  </div>
+
+  <footer>
+    <span id="visitor-count">—</span> loads · War Dogs range tool
+  </footer>
+
+  <script>
+    const STORAGE_KEY = "wd-artillery-mortar";
+    const UNIT_KEY = "wd-artillery-unit";
+
+    // Community flat-ground firing tables (range m → elevation MIL).
+    // Source: Apollyon wardogs-calculator (MIT) — community Beta snapshot.
+    const TABLES = {"mortar":[[80,950],[110,900],[132,850],[187,800],[240,750],[290,700],[340,650],[385,600],[430,550],[470,500],[510,450],[545,400],[578,350],[609,300],[637,250],[661,200],[684,150],[707,100]],"spgLow":[[1178,20],[1230,30],[1281,40],[1332,50],[1382,60],[1479,80],[1528,90],[1574,100],[1620,110],[1664,120],[1708,130],[1750,140],[1791,150],[1831,160],[1978,200],[2013,210],[2046,220],[2078,230],[2108,240],[2138,250],[2167,260],[2195,270],[2382,350],[2401,360],[2420,370],[2437,380],[2454,390],[2470,400],[2485,410],[2499,420],[2513,430],[2525,440],[2537,450],[2548,460],[2559,470],[2568,480],[2578,490],[2585,500],[2593,510],[2600,520],[2606,530],[2611,540],[2616,550],[2620,560]],"spgHigh":[[734,1400],[779,1390],[825,1380],[869,1370],[913,1360],[956,1350],[999,1340],[1041,1330],[1083,1320],[1124,1310],[1165,1300],[1205,1290],[1245,1280],[1285,1270],[1324,1260],[1363,1250],[1401,1240],[1438,1230],[1475,1220],[1512,1210],[1547,1200],[1582,1190],[1616,1180],[1650,1170],[1684,1160],[1717,1150],[1750,1140],[1782,1130],[1813,1120],[1844,1110],[1875,1100],[1905,1090],[1934,1080],[1963,1070],[1991,1060],[2019,1050],[2046,1040],[2072,1030],[2098,1020],[2123,1010],[2147,1000],[2171,990],[2194,980],[2217,970],[2239,960],[2261,950],[2282,940],[2303,930],[2323,920],[2342,910],[2360,900],[2378,890],[2395,880],[2412,870],[2429,860],[2444,850],[2460,840],[2474,830],[2488,820],[2501,810],[2513,800],[2524,790],[2536,780],[2546,770],[2557,760],[2567,750],[2576,740],[2584,730],[2592,720],[2599,710],[2604,700],[2609,690],[2613,680],[2617,670],[2621,660],[2624,650],[2626,640],[2628,630],[2629,610]]};
+
+    function interpolateMil(table, meters) {
+      if (!table || !table.length || !Number.isFinite(meters)) return null;
+      const pts = table;
+      const minR = pts[0][0];
+      const maxR = pts[pts.length - 1][0];
+      if (meters < minR || meters > maxR) return null;
+      if (meters === minR) return pts[0][1];
+      if (meters === maxR) return pts[pts.length - 1][1];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [d1, m1] = pts[i];
+        const [d2, m2] = pts[i + 1];
+        if (meters >= d1 && meters <= d2) {
+          if (d2 === d1) return m2;
+          return m1 + ((meters - d1) * (m2 - m1)) / (d2 - d1);
+        }
+      }
+      return null;
+    }
+
+    // L81: 80-110 not usable; tube min sits ~halfway 110-132 (~121 m).
+    // Max can be cranked ~one increment past 684 m (~707 m @ 100 MIL).
+    const L81_MIN_M = 121;
+    const L81_MAX_M = 707;
+
+    // SPH-2: low-arc 20–30 MIL is deadzone; first viable ~40 MIL / 1281 m.
+    // High-arc last viable ~60% from 1390→1400 MIL (~752 m / 1396 MIL).
+    const SPG_LOW_MIN_M = 1281;
+    const SPG_LOW_MIN_MIL = 40;
+    const SPG_HIGH_MIN_M = 752;
+    const SPG_HIGH_MAX_MIL = 1396;
+    const SPG_MAX_M = 2620;
+
+    /** Major L81 sight marks (RNG m, MIL) — same as optic labels. */
+    const L81_MARKS = TABLES.mortar.filter(function (p) {
+      return p[0] >= 110;
+    });
+
+    function neighboringMarks(meters) {
+      const marks = L81_MARKS;
+      for (let i = 0; i < marks.length - 1; i++) {
+        if (meters >= marks[i][0] && meters <= marks[i + 1][0]) {
+          return { below: marks[i], above: marks[i + 1] };
+        }
+      }
+      if (meters < marks[0][0]) return { below: null, above: marks[0] };
+      return { below: marks[marks.length - 1], above: null };
+    }
+
+    function renderSight(meters, elev) {
+      const isL81 = elev && elev.label === "L81 Mortar";
+      if (!isL81) {
+        els.sight.classList.remove("visible");
+        return;
+      }
+
+      const mil = elev.mil;
+      els.sight.classList.add("visible");
+
+      // Viewport: ~200 MIL window, lower MIL toward top (longer range)
+      const halfWindow = 100;
+      let milTop = mil - halfWindow;   // low mil = top of optic
+      let milBottom = mil + halfWindow; // high mil = bottom
+      const tableMinMil = L81_MARKS[L81_MARKS.length - 1][1]; // 100
+      const tableMaxMil = L81_MARKS[0][1]; // 900
+      if (milTop < tableMinMil) {
+        milBottom += tableMinMil - milTop;
+        milTop = tableMinMil;
+      }
+      if (milBottom > tableMaxMil) {
+        milTop -= milBottom - tableMaxMil;
+        milBottom = tableMaxMil;
+      }
+      milTop = Math.max(tableMinMil, milTop);
+      milBottom = Math.min(tableMaxMil, milBottom);
+      const span = milBottom - milTop || 1;
+
+      function milToPct(m) {
+        // higher mil → lower on screen (bottom); pad edges so labels/marker fit
+        const raw = ((m - milTop) / span) * 100;
+        return 8 + raw * 0.84;
+      }
+
+      // Build ticks: majors from table + 10-MIL minors
+      const parts = [];
+      const majorMils = {};
+      L81_MARKS.forEach(function (p) {
+        majorMils[p[1]] = p[0];
+      });
+
+      for (let m = Math.ceil(milTop / 10) * 10; m <= milBottom; m += 10) {
+        const isMajor = majorMils[m] != null;
+        const pct = milToPct(m);
+        if (pct < -2 || pct > 102) continue;
+        const rngLabel = isMajor ? majorMils[m] + "M" : "";
+        const milLabel = isMajor ? String(m) : "";
+        parts.push(
+          '<div class="sight-tick ' +
+            (isMajor ? "major" : "minor") +
+            '" style="top:' +
+            pct.toFixed(2) +
+            '%">' +
+            '<span class="rng">' +
+            rngLabel +
+            "</span>" +
+            '<span class="mil">' +
+            milLabel +
+            "</span></div>"
+        );
+      }
+      els.sightScale.innerHTML = parts.join("");
+
+      // Marker at exact mil
+      const markerPct = milToPct(mil);
+      els.sightMarker.hidden = false;
+      els.sightMarker.style.top = markerPct.toFixed(2) + "%";
+      els.sightMarkerVals.textContent =
+        Math.round(meters) + "M  ·  " + mil + " MIL";
+
+      // Between-marks coaching
+      const nbr = neighboringMarks(meters);
+      if (nbr.below && nbr.above) {
+        const spanM = nbr.above[0] - nbr.below[0];
+        const fromBelow = meters - nbr.below[0];
+        const pctAlong = spanM > 0 ? fromBelow / spanM : 0;
+        let where;
+        if (pctAlong < 0.15) {
+          where = "at the <strong>" + nbr.below[0] + "M</strong> mark";
+        } else if (pctAlong > 0.85) {
+          where = "at the <strong>" + nbr.above[0] + "M</strong> mark";
+        } else if (pctAlong < 0.4) {
+          where =
+            "between <strong>" +
+            nbr.below[0] +
+            "M</strong> and <strong>" +
+            nbr.above[0] +
+            "M</strong> — closer to " +
+            nbr.below[0] +
+            "M";
+        } else if (pctAlong > 0.6) {
+          where =
+            "between <strong>" +
+            nbr.below[0] +
+            "M</strong> and <strong>" +
+            nbr.above[0] +
+            "M</strong> — closer to " +
+            nbr.above[0] +
+            "M";
+        } else {
+          where =
+            "halfway between <strong>" +
+            nbr.below[0] +
+            "M</strong> and <strong>" +
+            nbr.above[0] +
+            "M</strong>";
+        }
+        els.sightBetween.innerHTML =
+          "Place indicator " + where + " (" + mil + " MIL)";
+      } else if (nbr.above) {
+        els.sightBetween.innerHTML =
+          "Near minimum — toward <strong>" + nbr.above[0] + "M</strong>";
+      } else if (nbr.below) {
+        els.sightBetween.innerHTML =
+          "Near max — past <strong>" + nbr.below[0] + "M</strong>";
+      } else {
+        els.sightBetween.textContent = "";
+      }
+    }
+
+    function elevationForRange(meters) {
+      const mortar = interpolateMil(TABLES.mortar, meters);
+      let high = interpolateMil(TABLES.spgHigh, meters);
+      let low = interpolateMil(TABLES.spgLow, meters);
+
+      // SPH-2 deadzones from field data
+      if (
+        high != null &&
+        (meters < SPG_HIGH_MIN_M || high > SPG_HIGH_MAX_MIL)
+      ) {
+        high = null;
+      }
+      if (
+        low != null &&
+        (meters < SPG_LOW_MIN_M || low < SPG_LOW_MIN_MIL)
+      ) {
+        low = null;
+      }
+
+      if (meters >= L81_MIN_M && meters <= L81_MAX_M && mortar != null) {
+        return {
+          mil: Math.round(mortar),
+          label: "L81 Mortar",
+          alt: Math.round(meters) + " m",
+        };
+      }
+      if (meters >= SPG_HIGH_MIN_M && meters <= SPG_MAX_M) {
+        if (high != null && low != null) {
+          return {
+            mil: Math.round(high),
+            label: "SPH-2 High",
+            alt: "Low " + Math.round(low) + " · " + Math.round(meters) + " m",
+          };
+        }
+        if (high != null) {
+          return {
+            mil: Math.round(high),
+            label: "SPH-2 High",
+            alt: Math.round(meters) + " m",
+          };
+        }
+        if (low != null) {
+          return {
+            mil: Math.round(low),
+            label: "SPH-2 Low",
+            alt: Math.round(meters) + " m",
+          };
+        }
+      }
+      return null;
+    }
+
+    function parseCoords(raw) {
+      if (!raw || typeof raw !== "string") return null;
+      const cleaned = raw.trim();
+      const re =
+        /([+-]?\d+(?:\.\d+)?)\s*[,;|\/\txXyY:\s]+\s*([+-]?\d+(?:\.\d+)?)/;
+      const m = cleaned.match(re);
+      if (!m) return null;
+      const y = parseFloat(m[1]);
+      const x = parseFloat(m[2]);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      return { x, y };
+    }
+
+    function formatCoord(n) {
+      return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+    }
+
+    function renderCoords(el, coords) {
+      if (!coords) {
+        el.classList.add("empty");
+        el.textContent = el.id === "mortar-display" ? "No mortar set" : "No target set";
+        return;
+      }
+      el.classList.remove("empty");
+      el.innerHTML =
+        '<span class="axis">Y</span>' + formatCoord(coords.y) +
+        '<span class="sep">·</span>' +
+        '<span class="axis">X</span>' + formatCoord(coords.x);
+    }
+
+    function suitability(meters) {
+      if (meters < L81_MIN_M) return { cls: "outofrange", text: "⚠ Too Close (L81 min ~121m)" };
+      if (meters <= L81_MAX_M) return { cls: "mortar", text: "✓ In Mortar Range" };
+      if (meters < SPG_HIGH_MIN_M) return { cls: "deadzone", text: "⚠ Dead Zone (707m–752m)" };
+      if (meters <= SPG_MAX_M) return { cls: "artillery", text: "✓ Artillery Tank Range" };
+      return { cls: "outofrange", text: "⚠ Out of Range" };
+    }
+
+    const state = { mortar: null, target: null, unit: "m" };
+
+    const els = {
+      mortarDisplay: document.getElementById("mortar-display"),
+      mortarInput: document.getElementById("mortar-input"),
+      mortarPaste: document.getElementById("mortar-paste"),
+      mortarSet: document.getElementById("mortar-set"),
+      mortarStatus: document.getElementById("mortar-status"),
+      targetDisplay: document.getElementById("target-display"),
+      targetInput: document.getElementById("target-input"),
+      targetPaste: document.getElementById("target-paste"),
+      targetSet: document.getElementById("target-set"),
+      targetStatus: document.getElementById("target-status"),
+      resultHeading: document.getElementById("result-heading"),
+      distance: document.getElementById("distance"),
+      milMeta: document.getElementById("mil-meta"),
+      badge: document.getElementById("badge"),
+      delta: document.getElementById("delta"),
+      unitM: document.getElementById("unit-m"),
+      unitMil: document.getElementById("unit-mil"),
+      sight: document.getElementById("sight"),
+      sightScale: document.getElementById("sight-scale"),
+      sightMarker: document.getElementById("sight-marker"),
+      sightMarkerVals: document.getElementById("sight-marker-vals"),
+      sightBetween: document.getElementById("sight-between"),
+      visitorCount: document.getElementById("visitor-count"),
+    };
+
+    function setStatus(el, msg, ok) {
+      el.textContent = msg || "";
+      el.classList.toggle("ok", !!ok);
+    }
+
+    function saveMortar() {
+      if (state.mortar) localStorage.setItem(STORAGE_KEY, JSON.stringify(state.mortar));
+    }
+
+    function loadMortar() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.x === "number" && typeof parsed.y === "number") {
+          state.mortar = parsed;
+        }
+      } catch (_) {}
+    }
+
+    function loadUnit() {
+      try {
+        const u = localStorage.getItem(UNIT_KEY);
+        if (u === "m" || u === "mil") state.unit = u;
+      } catch (_) {}
+    }
+
+    function saveUnit() {
+      try { localStorage.setItem(UNIT_KEY, state.unit); } catch (_) {}
+    }
+
+    function syncUnitToggle() {
+      const isM = state.unit === "m";
+      els.unitM.setAttribute("aria-pressed", String(isM));
+      els.unitMil.setAttribute("aria-pressed", String(!isM));
+      els.resultHeading.textContent = isM ? "Distance" : "Elevation";
+    }
+
+    function setUnit(unit) {
+      state.unit = unit;
+      saveUnit();
+      syncUnitToggle();
+      updateResult();
+    }
+
+    function applyMortar(coords) {
+      state.mortar = coords;
+      saveMortar();
+      renderCoords(els.mortarDisplay, coords);
+      updateResult();
+    }
+
+    function applyTarget(coords) {
+      state.target = coords;
+      renderCoords(els.targetDisplay, coords);
+      updateResult();
+    }
+
+    function updateResult() {
+      if (!state.mortar || !state.target) {
+        els.distance.className = "distance placeholder";
+        els.distance.textContent = "Set mortar & target";
+        els.badge.className = "badge hidden";
+        els.delta.hidden = true;
+        els.milMeta.hidden = true;
+        els.sight.classList.remove("visible");
+        return;
+      }
+
+      const dx = state.target.x - state.mortar.x;
+      const dy = state.target.y - state.mortar.y;
+      const meters = Math.sqrt(dx * dx + dy * dy) * 100;
+      const rounded = Math.round(meters);
+
+      const suit = suitability(meters);
+      els.badge.className = "badge " + suit.cls;
+      els.badge.textContent = suit.text;
+      els.delta.hidden = false;
+      els.delta.textContent = "ΔX " + formatCoord(dx) + "  ·  ΔY " + formatCoord(dy);
+
+      const elev = elevationForRange(meters);
+      renderSight(meters, elev);
+
+      if (state.unit === "mil") {
+        els.distance.className = "distance";
+        if (elev) {
+          els.distance.innerHTML = elev.mil.toLocaleString() + '<span class="unit">MIL</span>';
+          els.milMeta.hidden = false;
+          els.milMeta.textContent = elev.label + " · " + elev.alt;
+        } else {
+          els.distance.innerHTML = '—<span class="unit">MIL</span>';
+          els.milMeta.hidden = false;
+          els.milMeta.textContent = "No table solution · " + rounded.toLocaleString() + " m";
+        }
+      } else {
+        els.distance.className = "distance";
+        els.distance.innerHTML = rounded.toLocaleString() + '<span class="unit">m</span>';
+        if (elev) {
+          els.milMeta.hidden = false;
+          els.milMeta.textContent = elev.mil + " MIL · " + elev.label;
+        } else {
+          els.milMeta.hidden = true;
+        }
+      }
+    }
+
+    function tryParseFromInput(inputEl, statusEl, applyFn, label) {
+      const coords = parseCoords(inputEl.value);
+      if (!coords) {
+        setStatus(statusEl, "Could not parse " + label + " coordinates.", false);
+        return false;
+      }
+      applyFn(coords);
+      inputEl.value = "";
+      inputEl.blur();
+      setStatus(statusEl, label + " set.", true);
+      setTimeout(function () { setStatus(statusEl, ""); }, 1800);
+      return true;
+    }
+
+    async function pasteAndApply(statusEl, inputEl, applyFn, label) {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          focusForManualPaste(inputEl, statusEl);
+          return;
+        }
+        const text = await navigator.clipboard.readText();
+        const coords = parseCoords(text);
+        if (!coords) {
+          setStatus(statusEl, "No coordinates found in clipboard.", false);
+          return;
+        }
+        applyFn(coords);
+        setStatus(statusEl, label + " set from clipboard.", true);
+        setTimeout(function () { setStatus(statusEl, ""); }, 1800);
+      } catch (_) {
+        focusForManualPaste(inputEl, statusEl);
+      }
+    }
+
+    function focusForManualPaste(inputEl, statusEl) {
+      inputEl.focus();
+      inputEl.select();
+      setStatus(statusEl, "Long-press the field and paste, then tap Set.", false);
+    }
+
+    function onFieldPaste(e, statusEl, applyFn, label) {
+      const text = e.clipboardData && e.clipboardData.getData("text");
+      if (!text) return;
+      const coords = parseCoords(text);
+      if (!coords) return;
+      e.preventDefault();
+      applyFn(coords);
+      e.target.value = "";
+      e.target.blur();
+      setStatus(statusEl, label + " set.", true);
+      setTimeout(function () { setStatus(statusEl, ""); }, 1800);
+    }
+
+    els.mortarPaste.addEventListener("click", function () {
+      pasteAndApply(els.mortarStatus, els.mortarInput, applyMortar, "Mortar");
+    });
+    els.targetPaste.addEventListener("click", function () {
+      pasteAndApply(els.targetStatus, els.targetInput, applyTarget, "Target");
+    });
+    els.mortarSet.addEventListener("click", function () {
+      tryParseFromInput(els.mortarInput, els.mortarStatus, applyMortar, "Mortar");
+    });
+    els.targetSet.addEventListener("click", function () {
+      tryParseFromInput(els.targetInput, els.targetStatus, applyTarget, "Target");
+    });
+    els.mortarInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); els.mortarSet.click(); }
+    });
+    els.targetInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); els.targetSet.click(); }
+    });
+    els.mortarInput.addEventListener("paste", function (e) {
+      onFieldPaste(e, els.mortarStatus, applyMortar, "Mortar");
+    });
+    els.targetInput.addEventListener("paste", function (e) {
+      onFieldPaste(e, els.targetStatus, applyTarget, "Target");
+    });
+    els.unitM.addEventListener("click", function () { setUnit("m"); });
+    els.unitMil.addEventListener("click", function () { setUnit("mil"); });
+
+    loadMortar();
+    loadUnit();
+    syncUnitToggle();
+    renderCoords(els.mortarDisplay, state.mortar);
+    renderCoords(els.targetDisplay, state.target);
+    updateResult();
+
+    (async function trackVisit() {
+      // hitscounter.dev — CounterAPI is gone (410). Stable page id for GH Pages.
+      const pageId = "https://alexanderjackalmgren.github.io/wd-artillery-strike/";
+      const endpoint =
+        "https://hitscounter.dev/api/hit?url=" +
+        encodeURIComponent(pageId) +
+        "&label=Visitors&message_style=flat&color=30363d";
+      try {
+        const res = await fetch(endpoint, { cache: "no-store" });
+        if (!res.ok) throw new Error("counter failed");
+        const svg = await res.text();
+        // aria-label / title like "Visitors: 12 / 3" (total / today)
+        const m =
+          svg.match(/aria-label="[^"]*?([\d,]+)\s*\/\s*([\d,]+)/i) ||
+          svg.match(/<title>[^<]*?([\d,]+)\s*\/\s*([\d,]+)/i);
+        if (m) {
+          const total = parseInt(m[1].replace(/,/g, ""), 10);
+          if (Number.isFinite(total)) {
+            els.visitorCount.textContent = total.toLocaleString();
+            return;
+          }
+        }
+        throw new Error("parse failed");
+      } catch (_) {
+        els.visitorCount.textContent = "—";
+      }
+    })();
+  </script>
+</body>
+</html>
